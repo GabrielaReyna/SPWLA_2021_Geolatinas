@@ -8,6 +8,8 @@ import tensorflow as tf
 
 from tensorflow import keras
 from tensorflow.keras import layers
+import numpy as np
+import os
 
 print(tf.__version__)
 
@@ -62,7 +64,7 @@ class PrintDot(keras.callbacks.Callback):
     if epoch % 100 == 0: print('')
     print('.', end='')
 
-EPOCHS = 200
+EPOCHS = 100
 
 history = model.fit(
   x_train, y_train,
@@ -102,6 +104,8 @@ def plot_history(history):
 plot_history(history)
 
 test_predictions = model.predict(x_test).flatten()
+predictions_file= os.path.join(os.getcwd(), "predictions_vhs_well0.npy")
+np.save(predictions_file, test_predictions)
 
 plt.scatter(y_test, test_predictions)
 plt.xlabel('True Values [MPG]')
@@ -112,4 +116,52 @@ plt.xlim([0,plt.xlim()[1]])
 plt.ylim([0,plt.ylim()[1]])
 _ = plt.plot([-100, 100], [-100, 100])
 plt.show()
+
+
+
+#prepare dataset for prediction for the whole well
+#test data
+well0 = pd.read_csv((src_path+"well_0.csv"))
+well0 = well0[col_names_all+["DEPTH"]]
+well0 = well0[well0["NEU"].notna()]
+well0 = well0[well0["GR"].notna()]
+well0 = well0[well0["DEN"].notna()]
+
+#take the columns needed for performing prediction and save npy file
+
+well_0_x = well0[col_names_x]
+test_predictions = model.predict(well_0_x).flatten()
+predictions_file= os.path.join(os.getcwd(), "predictions_vhs_well0_whole.npy")
+np.save(predictions_file, test_predictions)
+#predict
+
+
+fig = plt.figure(figsize=(10, 50))
+ax = fig.add_subplot(1,1,1)
+
+#Set up the plot axes
+
+#ax1 = plt.subplot2grid((1,1), (0,0), rowspan=1, colspan = 1) # Gamma-ray
+
+
+
+#Title of well logs plot
+
+
+# As our curve scales will be detached from the top of the track,
+# this code adds the top border back in without dealing with splines
+
+print(len(well0["DEPTH"]))
+print(len(well0["VSH"]))
+print(len(test_predictions))
+
+# Shale volume truth
+ax.plot(well0["VSH"], well0["DEPTH"], color = "green", label="True VSH", alpha=0.7)
+ax.plot( test_predictions, well0["DEPTH"], color = "blue", label="Predicted VSH", alpha=0.7)
+plt.xlim([0,1])
+plt.gca().invert_yaxis()
+plt.legend()
+plt.savefig("well_plot.png")
+plt.show()
+
 
